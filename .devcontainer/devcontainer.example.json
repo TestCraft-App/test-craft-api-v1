@@ -1,0 +1,13 @@
+{
+	"name": "TestCraft",
+	"image": "mcr.microsoft.com/devcontainers/python:0-3.11",
+	"forwardPorts": [
+		8080
+	],
+	"postCreateCommand": "pip3 install --user -r requirements.txt",
+	"remoteEnv": {
+		"FLASK_ENV": "local",
+		"PROJECT_ID": "440630564453",
+		"OPENAI_API_KEY": "APIKEY"
+	}
+}

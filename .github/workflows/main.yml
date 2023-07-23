@@ -1,0 +1,46 @@
+name: Build and Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+
+env:
+  REGION: us-central1
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - id: 'auth'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+    - name: Setup Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+
+    - name: Build and push Docker image
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            export SERVICE_NAME=openai-api-proxy
+        else
+            export SERVICE_NAME=openai-api-proxy-dev
+        fi
+        gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/$SERVICE_NAME
+
+    - name: Deploy to Google Cloud Run
+      run: |
+        if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            export SERVICE_NAME=openai-api-proxy
+            export ENVIRONMENT=production
+        else
+            export SERVICE_NAME=openai-api-proxy-dev
+            export ENVIRONMENT=development
+        fi
+        gcloud run deploy $SERVICE_NAME --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/$SERVICE_NAME --region ${{ env.REGION }} --platform managed --allow-unauthenticated --update-env-vars FLASK_ENV=$ENVIRONMENT
