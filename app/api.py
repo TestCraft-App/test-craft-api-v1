@@ -56,7 +56,7 @@ def parse_html(source):
     return html
 
 
-def call_openai_api(prompt, role, model=""):
+def call_openai_api(prompt, role, isStream, model=""):
     global MODEL
 
     openai.api_key = config.API_KEY
@@ -76,19 +76,22 @@ def call_openai_api(prompt, role, model=""):
         if config.ENVIRONMENT == "local":
             print(prompt)
 
-        stream = openai.ChatCompletion.create(
+        response = openai.ChatCompletion.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": role},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.5,
-            stream=True,
+            stream=isStream,
             user="TestCraftUser"
         )
 
+        if not isStream:
+            return response
+
         def generate():
-            for chunk in stream:
+            for chunk in response:
                 filtered_chunk = {
                     "choices": chunk.get("choices"),
                 }
@@ -104,7 +107,7 @@ api = Blueprint('api', __name__)
 
 @api.route('/api/generate-ideas', methods=['POST'])
 @query_params()
-def generate_ideas(source_code):
+def generate_ideas(source_code, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
     
@@ -139,12 +142,12 @@ def generate_ideas(source_code):
         <Idea 1>
         """
 
-    return call_openai_api(prompt, role)
+    return call_openai_api(prompt, role, stream)
 
 
 @api.route('/api/automate-tests', methods=['POST'])
 @query_params()
-def automate_tests(source_code, base_url, framework, language, pom=False):
+def automate_tests(source_code, base_url, framework, language, pom=False, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
     
@@ -187,12 +190,12 @@ def automate_tests(source_code, base_url, framework, language, pom=False):
     ```
     """
 
-    return call_openai_api(prompt, role)
+    return call_openai_api(prompt, role, stream)
 
 
 @api.route('/api/automate-tests-ideas', methods=['POST'])
 @query_params()
-def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=False):
+def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=False, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
     
@@ -241,12 +244,12 @@ def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=
     Include a comment to indicate where each file starts.
     """
 
-    return call_openai_api(prompt, role)
+    return call_openai_api(prompt, role, stream)
 
 
 @api.route('/api/check-accessibility', methods=['POST'])
 @query_params()
-def check_accessibility(source_code):
+def check_accessibility(source_code, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
     
@@ -293,4 +296,4 @@ def check_accessibility(source_code):
         - Test Details:
         """
 
-    return call_openai_api(prompt, role)
+    return call_openai_api(prompt, role, stream)
