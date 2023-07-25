@@ -35,3 +35,9 @@ It will request two details, enter the following:
 - Region: us-Central1 (29)  
 
 After deploying the service, Google Cloud Run will provide a URL to access the API.
+
+## Contributing
+Contributions to this project are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the project's repository.
+
+## License
+MIT License
