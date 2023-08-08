@@ -43,8 +43,8 @@ def is_prompt_length_valid(prompt):
 
 def is_valid_html(source_code):
     # Regex pattern for HTML tags
-    pattern = "^<.+>.*</.+>$"
-    return bool(re.match(pattern, source_code.strip()))
+    pattern = "<(\w+).*?>.*</\\1>"
+    return bool(re.match(pattern, source_code.strip(), flags=re.DOTALL))
 
 def parse_html(source):
     try:
