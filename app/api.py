@@ -22,6 +22,7 @@ ERROR_INVALID_ELEMENT = "Invalid html element."
 
 MODEL = MODEL_GPT35_16K
 
+
 def is_prompt_length_valid(prompt):
     encoding = tiktoken.encoding_for_model(MODEL)
     num_tokens = len(encoding.encode(prompt))
@@ -43,20 +44,24 @@ def is_prompt_length_valid(prompt):
 
 def is_valid_html(source_code):
     # Regex pattern for HTML tags
-    pattern = "<(\w+).*?>.*</\\1>"
+    pattern = "^<(\w+).*?>.*</\\1>$"
     return bool(re.match(pattern, source_code.strip(), flags=re.DOTALL))
+
 
 def parse_html(source):
     try:
         pattern = r'<[ ]*script.*?\/[ ]*script[ ]*>'
-        text = re.sub(pattern, '', source, flags=(re.IGNORECASE | re.MULTILINE | re.DOTALL))
-        html = htmlmin.minify(text, remove_comments=True, remove_empty_space=True)
+        text = re.sub(pattern, '', source, flags=(
+            re.IGNORECASE | re.MULTILINE | re.DOTALL))
+        html = htmlmin.minify(text, remove_comments=True,
+                              remove_empty_space=True)
     except:
         html = source
     return html
 
 
 def call_openai_api(prompt, role, isStream, model=""):
+    return jsonify({"message": "Yey"}), 200
     global MODEL
 
     openai.api_key = config.API_KEY
@@ -76,6 +81,7 @@ def call_openai_api(prompt, role, isStream, model=""):
         if config.ENVIRONMENT == "local":
             print(prompt)
 
+        """
         response = openai.ChatCompletion.create(
             model=MODEL,
             messages=[
@@ -98,6 +104,7 @@ def call_openai_api(prompt, role, isStream, model=""):
                 yield f"data: {json.dumps(filtered_chunk)}\n\n".encode()
 
         return Response(generate(), mimetype='text/event-stream')
+        """
     except openai.error.OpenAIError as e:
         return jsonify({"error": str(e.user_message)}), e.http_status
 
@@ -110,7 +117,7 @@ api = Blueprint('api', __name__)
 def generate_ideas(source_code, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
-    
+
     if config.ENVIRONMENT == "production":
         logger.log_struct(
             {
@@ -150,7 +157,7 @@ def generate_ideas(source_code, stream=True):
 def automate_tests(source_code, base_url, framework, language, pom=False, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
-    
+
     if config.ENVIRONMENT == "production":
         logger.log_struct(
             {
@@ -198,7 +205,7 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
 def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=False, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
-    
+
     if config.ENVIRONMENT == "production":
         logger.log_struct(
             {
@@ -252,7 +259,7 @@ def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=
 def check_accessibility(source_code, stream=True):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
-    
+
     if config.ENVIRONMENT == "production":
         logger.log_struct(
             {
