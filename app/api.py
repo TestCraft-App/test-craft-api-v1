@@ -44,7 +44,7 @@ def is_prompt_length_valid(prompt):
 
 def is_valid_html(source_code):
     # Regex pattern for HTML tags
-    pattern = "^<(\w+).*?>.*</\\1>$"
+    pattern = "^<(\w+).*?>.*$"
     return bool(re.match(pattern, source_code.strip(), flags=re.DOTALL))
 
 
@@ -61,7 +61,6 @@ def parse_html(source):
 
 
 def call_openai_api(prompt, role, isStream, model=""):
-    return jsonify({"message": "Yey"}), 200
     global MODEL
 
     openai.api_key = config.API_KEY
@@ -81,7 +80,6 @@ def call_openai_api(prompt, role, isStream, model=""):
         if config.ENVIRONMENT == "local":
             print(prompt)
 
-        """
         response = openai.ChatCompletion.create(
             model=MODEL,
             messages=[
@@ -104,7 +102,6 @@ def call_openai_api(prompt, role, isStream, model=""):
                 yield f"data: {json.dumps(filtered_chunk)}\n\n".encode()
 
         return Response(generate(), mimetype='text/event-stream')
-        """
     except openai.error.OpenAIError as e:
         return jsonify({"error": str(e.user_message)}), e.http_status
 
