@@ -16,4 +16,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8080
 
 # Run the application when the container launches
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 2 --timeout 0 "main:create_app()"
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 "main:create_app()"
