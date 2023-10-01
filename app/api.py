@@ -28,10 +28,7 @@ def is_prompt_length_valid(prompt):
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {
-                "model": MODEL,
-                "tokens": num_tokens
-            },
+            {"model": MODEL, "tokens": num_tokens},
             severity="INFO",
         )
     if MODEL == MODEL_GPT4:
@@ -50,11 +47,11 @@ def is_valid_html(source_code):
 
 def parse_html(source):
     try:
-        pattern = r'<[ ]*script.*?\/[ ]*script[ ]*>'
-        text = re.sub(pattern, '', source, flags=(
-            re.IGNORECASE | re.MULTILINE | re.DOTALL))
-        html = htmlmin.minify(text, remove_comments=True,
-                              remove_empty_space=True)
+        pattern = r"<[ ]*script.*?\/[ ]*script[ ]*>"
+        text = re.sub(
+            pattern, "", source, flags=(re.IGNORECASE | re.MULTILINE | re.DOTALL)
+        )
+        html = htmlmin.minify(text, remove_comments=True, remove_empty_space=True)
     except:
         html = source
     return html
@@ -73,7 +70,7 @@ def call_openai_api(prompt, role, isStream, model=""):
 
     if not is_prompt_length_valid(prompt):
         if config.ENVIRONMENT == "production":
-            logger.log_text('Prompt too large', severity='INFO')
+            logger.log_text("Prompt too large", severity="INFO")
         return jsonify({"error": "The prompt is too long."}), 413
 
     try:
@@ -84,11 +81,11 @@ def call_openai_api(prompt, role, isStream, model=""):
             model=MODEL,
             messages=[
                 {"role": "system", "content": role},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
             temperature=0.5,
             stream=isStream,
-            user="TestCraftUser"
+            user="TestCraftUser",
         )
 
         if not isStream:
@@ -101,15 +98,15 @@ def call_openai_api(prompt, role, isStream, model=""):
                 }
                 yield f"data: {json.dumps(filtered_chunk)}\n\n".encode()
 
-        return Response(generate(), mimetype='text/event-stream')
+        return Response(generate(), mimetype="text/event-stream")
     except openai.error.OpenAIError as e:
         return jsonify({"error": str(e.user_message)}), e.http_status
 
 
-api = Blueprint('api', __name__)
+api = Blueprint("api", __name__)
 
 
-@api.route('/api/generate-ideas', methods=['POST'])
+@api.route("/api/generate-ideas", methods=["POST"])
 @query_params()
 def generate_ideas(source_code, stream=True):
     if not is_valid_html(source_code):
@@ -117,20 +114,18 @@ def generate_ideas(source_code, stream=True):
 
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {
-                "mode": "Ideas"
-            },
+            {"mode": "Ideas"},
             severity="INFO",
         )
 
     role = "You are a Software Test Consultant"
 
     prompt = f"""
-        Generate test ideas based on the html element below. 
-        Focus on tests that are user oriented and not referring to html elements suchs as divs or classes. 
-        Include negative tests. If possible, add some creative test scenarios. 
-        Format the output as unordered lists, with a heading for each required list, such as Positive Tests, Negative Tests, etc. Don't include any other heading. 
-        Html: 
+        Generate test ideas based on the HTML element below. Think this step by step, as a real Tester would.
+        Focus on user-oriented tests that do not refer to HTML elements such as divs or classes. 
+        Include negative tests and creative test scenarios. 
+        Format the output as unordered lists, with a heading for each required list, such as Positive Tests or Negative Tests. Don't include any other heading. 
+        HTML: 
         ```
         {parse_html(source_code)}
         ```
@@ -149,7 +144,7 @@ def generate_ideas(source_code, stream=True):
     return call_openai_api(prompt, role, stream)
 
 
-@api.route('/api/automate-tests', methods=['POST'])
+@api.route("/api/automate-tests", methods=["POST"])
 @query_params()
 def automate_tests(source_code, base_url, framework, language, pom=False, stream=True):
     if not is_valid_html(source_code):
@@ -183,7 +178,7 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
     if pom:
         prompt += f"""
     Create page object models and use them in the tests.
-    Selectors must be encapsulated in properties. Methods should be used for actions.
+    Selectors must be encapsulated in properties. Actions must be encapsulated in methods.
     Include a comment to indicate where each file starts.
     """
 
@@ -197,9 +192,11 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
     return call_openai_api(prompt, role, stream)
 
 
-@api.route('/api/automate-tests-ideas', methods=['POST'])
+@api.route("/api/automate-tests-ideas", methods=["POST"])
 @query_params()
-def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=False, stream=True):
+def automate_tests_ideas(
+    source_code, base_url, framework, language, ideas, pom=False, stream=True
+):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -244,14 +241,14 @@ def automate_tests_ideas(source_code, base_url, framework, language, ideas, pom=
     if pom:
         prompt += f"""
     Create page object models and use them in the tests.
-    Selectors must be encapsulated in properties. Methods should be used for actions.
+    Selectors must be encapsulated in properties. Actions must be encapsulated in methods.
     Include a comment to indicate where each file starts.
     """
 
     return call_openai_api(prompt, role, stream)
 
 
-@api.route('/api/check-accessibility', methods=['POST'])
+@api.route("/api/check-accessibility", methods=["POST"])
 @query_params()
 def check_accessibility(source_code, stream=True):
     if not is_valid_html(source_code):
@@ -259,18 +256,17 @@ def check_accessibility(source_code, stream=True):
 
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {
-                "mode": "Ideas"
-            },
+            {"mode": "Ideas"},
             severity="INFO",
         )
 
     role = "You are an expert on Web Accessibility"
 
     prompt = f"""
-        Check the html element below for accessibility issues according to WCAG 2.1. 
-        For the criteria that cannot be assessed just by looking at the html, create accessibility tests. 
-        Include a reference link to the criteria for each issue and test. 
+        Check the HTML element below for accessibility issues according to WCAG 2.1.
+        Think about this step by step. First, assess the element against each criterion. Then, report the result in the format specified below. 
+        For the criteria that cannot be assessed just by looking at the HTML, create accessibility tests. 
+        In the report, each criteria must be a link to the reference documentation.
         
         Html: 
         ```
