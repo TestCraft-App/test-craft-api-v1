@@ -1,5 +1,5 @@
 Flask==2.3.2
-openai
+openai==0.28
 PyGithub
 google-cloud-secret-manager
 google-cloud-logging
