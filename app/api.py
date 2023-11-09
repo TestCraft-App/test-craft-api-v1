@@ -1,7 +1,7 @@
 import json
 import re
 
-import openai
+from openai import OpenAI
 import tiktoken
 from flask import Response, jsonify
 
@@ -21,7 +21,6 @@ MAX_TOKENS_GPT35_16K = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
 MODEL = MODEL_GPT35_16K
-
 
 def is_prompt_length_valid(prompt):
     encoding = tiktoken.encoding_for_model(MODEL)
@@ -60,7 +59,9 @@ def parse_html(source):
 def call_openai_api(prompt, role, isStream, model=""):
     global MODEL
 
-    openai.api_key = config.API_KEY
+    client = OpenAI(
+      config.API_KEY, 
+    )
 
     if model == "":
         if config.ENVIRONMENT == "production":
@@ -77,7 +78,7 @@ def call_openai_api(prompt, role, isStream, model=""):
         if config.ENVIRONMENT == "local":
             print(prompt)
 
-        response = openai.ChatCompletion.create(
+        response = client.completions.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": role},
