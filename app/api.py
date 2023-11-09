@@ -15,7 +15,7 @@ config = Config()
 logger = Config.logger
 
 MODEL_GPT35_16K = "gpt-3.5-turbo-16k"
-MODEL_GPT4 = "gpt-4"
+MODEL_GPT4 = "gpt-4-1106-preview"
 MAX_TOKENS_GPT4 = 8000
 MAX_TOKENS_GPT35_16K = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
