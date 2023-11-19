@@ -1,7 +1,7 @@
 import json
 import re
 
-from openai import OpenAI
+from openai import OpenAI, OpenAIError
 import tiktoken
 from flask import Response, jsonify
 
@@ -16,7 +16,7 @@ logger = Config.logger
 
 MODEL_GPT35_16K = "gpt-3.5-turbo-16k"
 MODEL_GPT4 = "gpt-4-1106-preview"
-MAX_TOKENS_GPT4 = 8000
+MAX_TOKENS_GPT4 = 128000
 MAX_TOKENS_GPT35_16K = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
@@ -59,8 +59,7 @@ def parse_html(source):
 def call_openai_api(prompt, role, isStream, model=""):
     global MODEL
 
-    client = OpenAI(
-      config.API_KEY, 
+    client = OpenAI( api_key=config.API_KEY, organization="org-vrjw201KSt5hgeiFuytTSaHb"
     )
 
     if model == "":
@@ -78,12 +77,12 @@ def call_openai_api(prompt, role, isStream, model=""):
         if config.ENVIRONMENT == "local":
             print(prompt)
 
-        response = client.completions.create(
+        response = client.chat.completions.create(
             model=MODEL,
             messages=[
                 {"role": "system", "content": role},
                 {"role": "user", "content": prompt},
-            ],
+            ],  
             temperature=0.5,
             stream=isStream,
             user="TestCraftUser",
@@ -93,14 +92,14 @@ def call_openai_api(prompt, role, isStream, model=""):
             return response
 
         def generate():
-            for chunk in response:
+            for part in response:
                 filtered_chunk = {
-                    "choices": chunk.get("choices"),
+                    "choices": part.model_dump().get("choices"),
                 }
                 yield f"data: {json.dumps(filtered_chunk)}\n\n".encode()
 
         return Response(generate(), mimetype="text/event-stream")
-    except openai.error.OpenAIError as e:
+    except OpenAIError as e:
         return jsonify({"error": str(e.user_message)}), e.http_status
 
 
