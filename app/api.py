@@ -168,6 +168,7 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
     Use {base_url} as the baseUrl. Generate as much tests as possible. 
     Always try to add assertions.
     Do not include explanatory or introductory text. The output must be all {language} code.
+    Format the code in a plain text format without using triple backticks.
     """
 
     if framework == "playwright":
@@ -231,6 +232,7 @@ def automate_tests_ideas(
     Use {base_url} as the baseUrl.
     Always try to add assertions.
     Do not include explanatory or introductory text. The output must be all {language} code.
+    Format the code in a plain text format without using triple backticks.
     """
 
     if framework == "playwright":
