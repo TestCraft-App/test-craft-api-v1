@@ -14,13 +14,14 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-MODEL_GPT35_16K = "gpt-3.5-turbo-16k"
+MODEL_GPT35_16K = "gpt-3.5-turbo-0125"
 MODEL_GPT4 = "gpt-4-1106-preview"
 MAX_TOKENS_GPT4 = 16000
 MAX_TOKENS_GPT35_16K = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
 MODEL = MODEL_GPT35_16K
+
 
 def is_prompt_length_valid(prompt):
     encoding = tiktoken.encoding_for_model(MODEL)
@@ -59,12 +60,11 @@ def parse_html(source):
 def call_openai_api(prompt, role, isStream, model=""):
     global MODEL
 
-    client = OpenAI( api_key=config.API_KEY, organization="org-vrjw201KSt5hgeiFuytTSaHb"
-    )
+    client = OpenAI(api_key=config.API_KEY, organization="org-vrjw201KSt5hgeiFuytTSaHb")
 
     if model == "":
         if config.ENVIRONMENT == "production":
-            MODEL = MODEL_GPT4
+            MODEL = MODEL_GPT35_16K
     else:
         MODEL = model
 
@@ -82,7 +82,7 @@ def call_openai_api(prompt, role, isStream, model=""):
             messages=[
                 {"role": "system", "content": role},
                 {"role": "user", "content": prompt},
-            ],  
+            ],
             temperature=0.5,
             stream=isStream,
             user="TestCraftUser",
