@@ -333,5 +333,5 @@ def get_regex_for_run(tests, requirement):
         {requirement}
         """
 
-    response = call_openai_api(prompt, role, False)
+    response = call_openai_api(prompt, role, False, MODEL_GPT4)
     return response.choices[0].message.content
