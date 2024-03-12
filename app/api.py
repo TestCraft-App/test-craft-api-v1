@@ -316,8 +316,8 @@ def get_regex_for_run(tests, requirement):
         - A User Requirement to create the grep command
 
         You will have to do the following:
-        1. Review each suite name. If related to the User Requirement, add it to the regular expression.
-        2. Review each test name. If related to the User Requirement, add it to the regular expression.
+        1. Review each suite name. If directly related to the User Requirement, add it to the regular expression.
+        2. Review each test name. If directly related to the User Requirement, add it to the regular expression.
 
         Only respond with the regular expression. Use the format of the example response.
 
