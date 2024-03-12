@@ -89,6 +89,7 @@ def call_openai_api(prompt, role, isStream, model=""):
         )
 
         if not isStream:
+            print(response)
             return response
 
         def generate():
@@ -299,3 +300,38 @@ def check_accessibility(source_code, stream=True):
         """
 
     return call_openai_api(prompt, role, stream)
+
+
+@api.route("/api/get-regex-for-run", methods=["POST"])
+@query_params()
+def get_regex_for_run(tests, requirement):
+
+    role = "You are a Test Automation expert"
+
+    prompt = f"""
+        I have a Mocha test framework. I need you to create a regular expression to include in a grep command to run tests.
+
+        Below you will find two things:
+        - A JSON with suites, each containing an array of test names. 
+        - A User Requirement to create the grep command
+
+        You will have to do the following:
+        1. Review each suite name. If related to the User Requirement, add it to the regular expression.
+        2. Review each test name. If related to the User Requirement, add it to the regular expression.
+
+        Only respond with the regular expression. Use the format of the example response.
+
+        Example response:
+        Regex: Add User|Update User|Patch User
+        
+        JSON
+        ```
+        {tests}
+        ```
+
+        Requirement: 
+        {requirement}
+        """
+
+    response = call_openai_api(prompt, role, False)
+    return response.choices[0].message.content
