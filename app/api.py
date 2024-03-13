@@ -319,7 +319,9 @@ def get_regex_for_run(tests, requirement):
         1. Review each suite name. If directly related to the User Requirement, add it to the regular expression.
         2. Review each test name. If directly related to the User Requirement, add it to the regular expression.
 
-        Only respond with the regular expression. Use the format of the example response.
+        Only respond with the regular expression. 
+        If the User Requirement is not related to any suite or test, respond with ".*" to run all the tests.
+        Use the format of the example response.
 
         Example response:
         Regex: Add User|Update User|Patch User
