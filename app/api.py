@@ -57,10 +57,16 @@ def parse_html(source):
     return html
 
 
-def call_openai_api(prompt, role, isStream, model=""):
+def call_openai_api(prompt, role, isStream, model="", key=""):
     global MODEL
 
-    client = OpenAI(api_key=config.API_KEY, organization="org-vrjw201KSt5hgeiFuytTSaHb")
+    if key == "":
+        key = config.API_KEY
+        client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
+    else:
+        client = OpenAI(api_key=key)
+        logger.log('Using custom OpenAI API Key')
+    
 
     if model == "":
         if config.ENVIRONMENT == "production":
@@ -115,7 +121,7 @@ def ping():
 
 @api.route("/api/generate-ideas", methods=["POST"])
 @query_params()
-def generate_ideas(source_code, stream=True):
+def generate_ideas(source_code, stream=True, open_ai_api_key=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -148,12 +154,12 @@ def generate_ideas(source_code, stream=True):
         <Idea 1>
         """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
 
 
 @api.route("/api/automate-tests", methods=["POST"])
 @query_params()
-def automate_tests(source_code, base_url, framework, language, pom=False, stream=True):
+def automate_tests(source_code, base_url, framework, language, pom=False, stream=True, open_ai_api_key=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -197,13 +203,13 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
     ```
     """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
 
 
 @api.route("/api/automate-tests-ideas", methods=["POST"])
 @query_params()
 def automate_tests_ideas(
-    source_code, base_url, framework, language, ideas, pom=False, stream=True
+    source_code, base_url, framework, language, ideas, pom=False, stream=True, open_ai_api_key=""
 ):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
@@ -254,12 +260,12 @@ def automate_tests_ideas(
     Include a comment to indicate where each file starts.
     """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
 
 
 @api.route("/api/check-accessibility", methods=["POST"])
 @query_params()
-def check_accessibility(source_code, stream=True):
+def check_accessibility(source_code, stream=True, open_ai_api_key=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -305,12 +311,12 @@ def check_accessibility(source_code, stream=True):
         - Test Details:
         """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
 
 
 @api.route("/api/get-regex-for-run", methods=["POST"])
 @query_params()
-def get_regex_for_run(tests, requirement):
+def get_regex_for_run(tests, requirement, open_ai_api_key=""):
 
     role = "You are a Test Automation expert"
 
@@ -341,5 +347,5 @@ def get_regex_for_run(tests, requirement):
         {requirement}
         """
 
-    response = call_openai_api(prompt, role, False, MODEL_GPT4)
+    response = call_openai_api(prompt, role, False, MODEL_GPT4, key=open_ai_api_key)
     return response.choices[0].message.content
