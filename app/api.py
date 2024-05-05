@@ -107,6 +107,12 @@ def call_openai_api(prompt, role, isStream, model=""):
 api = Blueprint("api", __name__)
 
 
+@api.route("/api/ping", methods=["GET"])
+@query_params()
+def ping():
+    return jsonify({"pong": True}), 200
+
+
 @api.route("/api/generate-ideas", methods=["POST"])
 @query_params()
 def generate_ideas(source_code, stream=True):
