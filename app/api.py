@@ -65,14 +65,8 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
         client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
     else:
         client = OpenAI(api_key=key)
-        logger.log('Using custom OpenAI API Key')
-    
-
-    if model == "":
-        if config.ENVIRONMENT == "production":
-            MODEL = MODEL_GPT35_16K
-    else:
-        MODEL = model
+        if model:
+            MODEL = model
 
     if not is_prompt_length_valid(prompt):
         if config.ENVIRONMENT == "production":
@@ -107,7 +101,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
 
         return Response(generate(), mimetype="text/event-stream")
     except OpenAIError as e:
-        return jsonify({"error": str(e.user_message)}), e.http_status
+        return jsonify({"error": str(e.message)}), e.status_code
 
 
 api = Blueprint("api", __name__)
@@ -119,9 +113,22 @@ def ping():
     return jsonify({"pong": True}), 200
 
 
+@api.route("/api/models", methods=["GET"])
+@query_params()
+def models(open_ai_api_key=""):
+    if open_ai_api_key == "":
+        open_ai_api_key = config.API_KEY
+        client = OpenAI(api_key=open_ai_api_key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
+    else:
+        client = OpenAI(api_key=open_ai_api_key)
+    response = client.models.list()
+    models_list = response.model_dump().get('data')
+    return models_list, 200
+
+
 @api.route("/api/generate-ideas", methods=["POST"])
 @query_params()
-def generate_ideas(source_code, stream=True, open_ai_api_key=""):
+def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -154,12 +161,12 @@ def generate_ideas(source_code, stream=True, open_ai_api_key=""):
         <Idea 1>
         """
 
-    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/automate-tests", methods=["POST"])
 @query_params()
-def automate_tests(source_code, base_url, framework, language, pom=False, stream=True, open_ai_api_key=""):
+def automate_tests(source_code, base_url, framework, language, pom=False, stream=True, open_ai_api_key="", model=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -203,13 +210,13 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
     ```
     """
 
-    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/automate-tests-ideas", methods=["POST"])
 @query_params()
 def automate_tests_ideas(
-    source_code, base_url, framework, language, ideas, pom=False, stream=True, open_ai_api_key=""
+    source_code, base_url, framework, language, ideas, pom=False, stream=True, open_ai_api_key="", model=""
 ):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
@@ -260,12 +267,12 @@ def automate_tests_ideas(
     Include a comment to indicate where each file starts.
     """
 
-    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/check-accessibility", methods=["POST"])
 @query_params()
-def check_accessibility(source_code, stream=True, open_ai_api_key=""):
+def check_accessibility(source_code, stream=True, open_ai_api_key="", model=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -311,12 +318,12 @@ def check_accessibility(source_code, stream=True, open_ai_api_key=""):
         - Test Details:
         """
 
-    return call_openai_api(prompt, role, stream, key=open_ai_api_key)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/get-regex-for-run", methods=["POST"])
 @query_params()
-def get_regex_for_run(tests, requirement, open_ai_api_key=""):
+def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
 
     role = "You are a Test Automation expert"
 
@@ -347,5 +354,5 @@ def get_regex_for_run(tests, requirement, open_ai_api_key=""):
         {requirement}
         """
 
-    response = call_openai_api(prompt, role, False, MODEL_GPT4, key=open_ai_api_key)
+    response = call_openai_api(prompt, role, False, MODEL_GPT4, key=open_ai_api_key, model=model)
     return response.choices[0].message.content
