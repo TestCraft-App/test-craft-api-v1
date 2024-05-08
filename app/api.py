@@ -3,7 +3,7 @@ import re
 
 from openai import OpenAI, OpenAIError
 import tiktoken
-from flask import Response, jsonify
+from flask import Response, jsonify, request
 
 from flask import Blueprint
 
@@ -14,29 +14,37 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-MODEL_GPT35_16K = "gpt-3.5-turbo-0125"
-MODEL_GPT4 = "gpt-4-1106-preview"
-MAX_TOKENS_GPT4 = 16000
-MAX_TOKENS_GPT35_16K = 16000
+DEFAULT_MODEL = "gpt-3.5-turbo-0125"
+SUPPORTED_MODELS = [
+    {"name":"gpt-4-turbo-2024-04-09", "tokens": 128000},
+    {"name":"gpt-4-0125-preview", "tokens": 128000},
+    {"name":"gpt-4-1106-preview", "tokens": 128000},
+    {"name":"gpt-4-1106-vision-preview", "tokens": 128000},
+    {"name":"gpt-4-0613", "tokens": 8192},
+    {"name":"gpt-4-32k-0613", "tokens": 32768},
+    {"name":"gpt-3.5-turbo-0125", "tokens": 16385},
+    {"name":"gpt-3.5-turbo-1106", "tokens": 16385},
+]
+MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
-MODEL = MODEL_GPT35_16K
+def get_model_by_name(name):
+    for model in SUPPORTED_MODELS:
+        if model["name"] == name:
+            return model
+    return {}
 
-
-def is_prompt_length_valid(prompt):
-    encoding = tiktoken.encoding_for_model(MODEL)
+def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
+    encoding = tiktoken.encoding_for_model(model)
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {"model": MODEL, "tokens": num_tokens},
+            {"model": model, "tokens": num_tokens},
             severity="INFO",
         )
-    if MODEL == MODEL_GPT4:
-        return num_tokens < MAX_TOKENS_GPT4
-    elif MODEL == MODEL_GPT35_16K:
-        return num_tokens < MAX_TOKENS_GPT35_16K
-    else:
-        raise ValueError("Unsupported model: " + MODEL)
+    selected_model = get_model_by_name(model)
+    max_tokens = selected_model.get("tokens", MAX_TOKENS)
+    return num_tokens < max_tokens
 
 
 def is_valid_html(source_code):
@@ -57,28 +65,24 @@ def parse_html(source):
     return html
 
 
-def call_openai_api(prompt, role, isStream, model=""):
-    global MODEL
+def call_openai_api(prompt, role, isStream, model="", key=""):
+    if not model:
+        model = DEFAULT_MODEL
 
-    client = OpenAI(api_key=config.API_KEY, organization="org-vrjw201KSt5hgeiFuytTSaHb")
-
-    if model == "":
-        if config.ENVIRONMENT == "production":
-            MODEL = MODEL_GPT35_16K
+    if not key:
+        key = config.API_KEY
+        client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
     else:
-        MODEL = model
+        client = OpenAI(api_key=key)
 
-    if not is_prompt_length_valid(prompt):
+    if not is_prompt_length_valid(prompt, model):
         if config.ENVIRONMENT == "production":
             logger.log_text("Prompt too large", severity="INFO")
         return jsonify({"error": "The prompt is too long."}), 413
 
     try:
-        if config.ENVIRONMENT == "local":
-            print(prompt)
-
         response = client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=[
                 {"role": "system", "content": role},
                 {"role": "user", "content": prompt},
@@ -101,7 +105,7 @@ def call_openai_api(prompt, role, isStream, model=""):
 
         return Response(generate(), mimetype="text/event-stream")
     except OpenAIError as e:
-        return jsonify({"error": str(e.user_message)}), e.http_status
+        return jsonify({"error": str(e.message)}), e.status_code
 
 
 api = Blueprint("api", __name__)
@@ -113,9 +117,29 @@ def ping():
     return jsonify({"pong": True}), 200
 
 
+@api.route("/api/models", methods=["GET"])
+def models():
+    open_ai_api_key = request.args.get("open_ai_api_key", "")
+    if open_ai_api_key == "":
+        open_ai_api_key = config.API_KEY
+        client = OpenAI(
+            api_key=open_ai_api_key, organization="org-vrjw201KSt5hgeiFuytTSaHb"
+        )
+    else:
+        client = OpenAI(api_key=open_ai_api_key)
+    response = client.models.list()
+    # Example model: gpt-3.5-turbo-1106 (16,385 tokens)
+    models_list = response.model_dump().get("data")
+    filtered_list = [
+        {"label":f"{model['name']} ({model['tokens']} tokens)", "id": model["name"]} for model in SUPPORTED_MODELS
+            if any(model["name"] == openai_model["id"] for openai_model in models_list)]
+
+    return filtered_list, 200
+
+
 @api.route("/api/generate-ideas", methods=["POST"])
 @query_params()
-def generate_ideas(source_code, stream=True):
+def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -148,12 +172,21 @@ def generate_ideas(source_code, stream=True):
         <Idea 1>
         """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/automate-tests", methods=["POST"])
 @query_params()
-def automate_tests(source_code, base_url, framework, language, pom=False, stream=True):
+def automate_tests(
+    source_code,
+    base_url,
+    framework,
+    language,
+    pom=False,
+    stream=True,
+    open_ai_api_key="",
+    model="",
+):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -197,13 +230,21 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
     ```
     """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/automate-tests-ideas", methods=["POST"])
 @query_params()
 def automate_tests_ideas(
-    source_code, base_url, framework, language, ideas, pom=False, stream=True
+    source_code,
+    base_url,
+    framework,
+    language,
+    ideas,
+    pom=False,
+    stream=True,
+    open_ai_api_key="",
+    model="",
 ):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
@@ -254,12 +295,12 @@ def automate_tests_ideas(
     Include a comment to indicate where each file starts.
     """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/check-accessibility", methods=["POST"])
 @query_params()
-def check_accessibility(source_code, stream=True):
+def check_accessibility(source_code, stream=True, open_ai_api_key="", model=""):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -305,12 +346,12 @@ def check_accessibility(source_code, stream=True):
         - Test Details:
         """
 
-    return call_openai_api(prompt, role, stream)
+    return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
 
 
 @api.route("/api/get-regex-for-run", methods=["POST"])
 @query_params()
-def get_regex_for_run(tests, requirement):
+def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
 
     role = "You are a Test Automation expert"
 
@@ -341,5 +382,5 @@ def get_regex_for_run(tests, requirement):
         {requirement}
         """
 
-    response = call_openai_api(prompt, role, False, MODEL_GPT4)
+    response = call_openai_api(prompt, role, False, key=open_ai_api_key, model=model)
     return response.choices[0].message.content

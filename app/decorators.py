@@ -14,12 +14,15 @@ def query_params():
         @wraps(f)
         def wrapped(*args, **kwargs):
             payload = request.get_json(silent=True)
-            params = {name: payload.get(snake_to_camel(name), param.default) for name, param in parameters.items()}
+            if payload:
+                params = {name: payload.get(snake_to_camel(name), param.default) for name, param in parameters.items() if name and param}
 
-            if not all(v is not None for v in params.values()):
-                return jsonify({"error": "You are missing a required field."}), 400
+                if not all(v is not None for v in params.values()):
+                    return jsonify({"error": "You are missing a required field."}), 400
 
-            return f(**params)
+                return f(**params)
+            else:
+                return f()
 
         return wrapped
 
