@@ -3,7 +3,7 @@ import re
 
 from openai import OpenAI, OpenAIError
 import tiktoken
-from flask import Response, jsonify
+from flask import Response, jsonify, request
 
 from flask import Blueprint
 
@@ -14,29 +14,20 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-MODEL_GPT35_16K = "gpt-3.5-turbo-0125"
-MODEL_GPT4 = "gpt-4-1106-preview"
-MAX_TOKENS_GPT4 = 16000
-MAX_TOKENS_GPT35_16K = 16000
+DEFAULT_MODEL = "gpt-3.5-turbo-0125"
+MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
-MODEL = MODEL_GPT35_16K
 
-
-def is_prompt_length_valid(prompt):
-    encoding = tiktoken.encoding_for_model(MODEL)
+def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
+    encoding = tiktoken.encoding_for_model(model)
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {"model": MODEL, "tokens": num_tokens},
+            {"model": model, "tokens": num_tokens},
             severity="INFO",
         )
-    if MODEL == MODEL_GPT4:
-        return num_tokens < MAX_TOKENS_GPT4
-    elif MODEL == MODEL_GPT35_16K:
-        return num_tokens < MAX_TOKENS_GPT35_16K
-    else:
-        raise ValueError("Unsupported model: " + MODEL)
+    return num_tokens < MAX_TOKENS
 
 
 def is_valid_html(source_code):
@@ -58,7 +49,7 @@ def parse_html(source):
 
 
 def call_openai_api(prompt, role, isStream, model="", key=""):
-    global MODEL
+    MODEL = DEFAULT_MODEL
 
     if key == "":
         key = config.API_KEY
@@ -68,15 +59,12 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
         if model:
             MODEL = model
 
-    if not is_prompt_length_valid(prompt):
+    if not is_prompt_length_valid(prompt, MODEL):
         if config.ENVIRONMENT == "production":
             logger.log_text("Prompt too large", severity="INFO")
         return jsonify({"error": "The prompt is too long."}), 413
 
     try:
-        if config.ENVIRONMENT == "local":
-            print(prompt)
-
         response = client.chat.completions.create(
             model=MODEL,
             messages=[
@@ -114,15 +102,17 @@ def ping():
 
 
 @api.route("/api/models", methods=["GET"])
-@query_params()
-def models(open_ai_api_key=""):
+def models():
+    open_ai_api_key = request.args.get("open_ai_api_key", "")
     if open_ai_api_key == "":
         open_ai_api_key = config.API_KEY
-        client = OpenAI(api_key=open_ai_api_key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
+        client = OpenAI(
+            api_key=open_ai_api_key, organization="org-vrjw201KSt5hgeiFuytTSaHb"
+        )
     else:
         client = OpenAI(api_key=open_ai_api_key)
     response = client.models.list()
-    models_list = response.model_dump().get('data')
+    models_list = response.model_dump().get("data")
     return models_list, 200
 
 
@@ -166,7 +156,16 @@ def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
 
 @api.route("/api/automate-tests", methods=["POST"])
 @query_params()
-def automate_tests(source_code, base_url, framework, language, pom=False, stream=True, open_ai_api_key="", model=""):
+def automate_tests(
+    source_code,
+    base_url,
+    framework,
+    language,
+    pom=False,
+    stream=True,
+    open_ai_api_key="",
+    model="",
+):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
 
@@ -216,7 +215,15 @@ def automate_tests(source_code, base_url, framework, language, pom=False, stream
 @api.route("/api/automate-tests-ideas", methods=["POST"])
 @query_params()
 def automate_tests_ideas(
-    source_code, base_url, framework, language, ideas, pom=False, stream=True, open_ai_api_key="", model=""
+    source_code,
+    base_url,
+    framework,
+    language,
+    ideas,
+    pom=False,
+    stream=True,
+    open_ai_api_key="",
+    model="",
 ):
     if not is_valid_html(source_code):
         return jsonify({"error": ERROR_INVALID_ELEMENT}), 400
@@ -354,5 +361,5 @@ def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
         {requirement}
         """
 
-    response = call_openai_api(prompt, role, False, MODEL_GPT4, key=open_ai_api_key, model=model)
+    response = call_openai_api(prompt, role, False, key=open_ai_api_key, model=model)
     return response.choices[0].message.content
