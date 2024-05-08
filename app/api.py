@@ -29,7 +29,6 @@ MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
 
-
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
     encoding = tiktoken.encoding_for_model(model)
     num_tokens = len(encoding.encode(prompt))
@@ -38,7 +37,9 @@ def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
             {"model": model, "tokens": num_tokens},
             severity="INFO",
         )
-    return num_tokens < MAX_TOKENS
+    selected_model = next((supp_model for supp_model in SUPPORTED_MODELS if supp_model["name"] == model))
+    max_tokens = selected_model.get("tokens", MAX_TOKENS)
+    return num_tokens < max_tokens
 
 
 def is_valid_html(source_code):
@@ -60,24 +61,23 @@ def parse_html(source):
 
 
 def call_openai_api(prompt, role, isStream, model="", key=""):
-    MODEL = DEFAULT_MODEL
+    if not model:
+        model = DEFAULT_MODEL
 
-    if key == "":
+    if not key:
         key = config.API_KEY
         client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
     else:
         client = OpenAI(api_key=key)
-        if model:
-            MODEL = model
 
-    if not is_prompt_length_valid(prompt, MODEL):
+    if not is_prompt_length_valid(prompt, model):
         if config.ENVIRONMENT == "production":
             logger.log_text("Prompt too large", severity="INFO")
         return jsonify({"error": "The prompt is too long."}), 413
 
     try:
         response = client.chat.completions.create(
-            model=MODEL,
+            model=model,
             messages=[
                 {"role": "system", "content": role},
                 {"role": "user", "content": prompt},
