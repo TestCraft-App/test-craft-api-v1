@@ -28,6 +28,11 @@ SUPPORTED_MODELS = [
 MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
 
+def get_model_by_name(name):
+    for model in SUPPORTED_MODELS:
+        if model["name"] == name:
+            return model
+    return {}
 
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
     encoding = tiktoken.encoding_for_model(model)
@@ -37,7 +42,7 @@ def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
             {"model": model, "tokens": num_tokens},
             severity="INFO",
         )
-    selected_model = next((supp_model for supp_model in SUPPORTED_MODELS if supp_model["name"] == model))
+    selected_model = get_model_by_name(model)
     max_tokens = selected_model.get("tokens", MAX_TOKENS)
     return num_tokens < max_tokens
 
