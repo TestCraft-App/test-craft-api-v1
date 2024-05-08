@@ -15,8 +15,19 @@ config = Config()
 logger = Config.logger
 
 DEFAULT_MODEL = "gpt-3.5-turbo-0125"
+SUPPORTED_MODELS = [
+    {"name":"gpt-4-turbo-2024-04-09", "tokens": 128000},
+    {"name":"gpt-4-0125-preview", "tokens": 128000},
+    {"name":"gpt-4-1106-preview", "tokens": 128000},
+    {"name":"gpt-4-1106-vision-preview", "tokens": 128000},
+    {"name":"gpt-4-0613", "tokens": 8192},
+    {"name":"gpt-4-32k-0613", "tokens": 32768},
+    {"name":"gpt-3.5-turbo-0125", "tokens": 16385},
+    {"name":"gpt-3.5-turbo-1106", "tokens": 16385},
+]
 MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
+
 
 
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
@@ -112,8 +123,13 @@ def models():
     else:
         client = OpenAI(api_key=open_ai_api_key)
     response = client.models.list()
+    # Example model: gpt-3.5-turbo-1106 (16,385 tokens)
     models_list = response.model_dump().get("data")
-    return models_list, 200
+    filtered_list = [
+        {"label":f"{model['name']} ({model['tokens']} tokens)", "id": model["name"]} for model in SUPPORTED_MODELS
+            if any(model["name"] == openai_model["id"] for openai_model in models_list)]
+
+    return filtered_list, 200
 
 
 @api.route("/api/generate-ideas", methods=["POST"])
