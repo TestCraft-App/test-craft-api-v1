@@ -16,23 +16,25 @@ logger = Config.logger
 
 DEFAULT_MODEL = "gpt-3.5-turbo-0125"
 SUPPORTED_MODELS = [
-    {"name":"gpt-4-turbo-2024-04-09", "tokens": 128000},
-    {"name":"gpt-4-0125-preview", "tokens": 128000},
-    {"name":"gpt-4-1106-preview", "tokens": 128000},
-    {"name":"gpt-4-1106-vision-preview", "tokens": 128000},
-    {"name":"gpt-4-0613", "tokens": 8192},
-    {"name":"gpt-4-32k-0613", "tokens": 32768},
-    {"name":"gpt-3.5-turbo-0125", "tokens": 16385},
-    {"name":"gpt-3.5-turbo-1106", "tokens": 16385},
+    {"name": "gpt-4-turbo-2024-04-09", "tokens": 128000},
+    {"name": "gpt-4-0125-preview", "tokens": 128000},
+    {"name": "gpt-4-1106-preview", "tokens": 128000},
+    {"name": "gpt-4-1106-vision-preview", "tokens": 128000},
+    {"name": "gpt-4-0613", "tokens": 8192},
+    {"name": "gpt-4-32k-0613", "tokens": 32768},
+    {"name": "gpt-3.5-turbo-0125", "tokens": 16385},
+    {"name": "gpt-3.5-turbo-1106", "tokens": 16385},
 ]
 MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
+
 
 def get_model_by_name(name):
     for model in SUPPORTED_MODELS:
         if model["name"] == name:
             return model
     return {}
+
 
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
     encoding = tiktoken.encoding_for_model(model)
@@ -131,8 +133,10 @@ def models():
     # Example model: gpt-3.5-turbo-1106 (16,385 tokens)
     models_list = response.model_dump().get("data")
     filtered_list = [
-        {"label":f"{model['name']} ({model['tokens']} tokens)", "id": model["name"]} for model in SUPPORTED_MODELS
-            if any(model["name"] == openai_model["id"] for openai_model in models_list)]
+        {"label": f"{model['name']} ({model['tokens']} tokens)", "id": model["name"]}
+        for model in SUPPORTED_MODELS
+        if any(model["name"] == openai_model["id"] for openai_model in models_list)
+    ]
 
     return filtered_list, 200
 
@@ -182,7 +186,7 @@ def automate_tests(
     base_url,
     framework,
     language,
-    pom=False,
+    pom=True,
     stream=True,
     open_ai_api_key="",
     model="",
@@ -241,7 +245,7 @@ def automate_tests_ideas(
     framework,
     language,
     ideas,
-    pom=False,
+    pom=True,
     stream=True,
     open_ai_api_key="",
     model="",
