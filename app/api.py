@@ -152,8 +152,11 @@ def models():
         for model in SUPPORTED_MODELS
         if any(model["name"] == openai_model["id"] for openai_model in models_list)
     ]
-
-    return filtered_list, 200
+    response = {
+        "models": filtered_list,
+        "default_model": DEFAULT_MODEL,
+    }
+    return response, 200
 
 
 @api.route("/api/generate-ideas", methods=["POST"])
