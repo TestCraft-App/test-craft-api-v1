@@ -19,25 +19,25 @@ SUPPORTED_MODELS = [
     {
         "name": "gpt-4-turbo",
         "tokens": 128000, 
-        "label": "gpt-4-turbo (128,000 tks)"},
+        "label": "gpt-4-turbo (128,000 tokens)"},
     {
         "name": "gpt-4-0125-preview",
         "tokens": 128000,
-        "label": "gpt-4-0125-preview (128,000 tks)",
+        "label": "gpt-4-0125-preview (128,000 tokens)",
     },
     {
         "name": "gpt-4-1106-preview",
         "tokens": 128000,
-        "label": "gpt-4-1106-preview (128,000 tks)",
+        "label": "gpt-4-1106-preview (128,000 tokens)",
     },
     {
         "name": "gpt-3.5-turbo", 
         "tokens": 16385, 
-        "label": "gpt-3.5-turbo (16,385 tks)"},
+        "label": "gpt-3.5-turbo (16,385 tokens)"},
     {
         "name": "gpt-3.5-turbo-1106",
         "tokens": 16385,
-        "label": "gpt-3.5-turbo-1106 (16,385 tks)",
+        "label": "gpt-3.5-turbo-1106 (16,385 tokens)",
     },
 ]
 MAX_TOKENS = 16000
@@ -88,6 +88,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
 
     if not key:
         key = config.API_KEY
+        model = DEFAULT_MODEL
         client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
     else:
         client = OpenAI(api_key=key)
@@ -167,7 +168,10 @@ def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
 
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {"mode": "Ideas"},
+            {
+                "mode": "Ideas",
+                "model": model,
+            },
             severity="INFO",
         )
 
@@ -219,6 +223,7 @@ def automate_tests(
                 "language": language,
                 "framework": framework,
                 "pom": pom,
+                "model": model,
             },
             severity="INFO",
         )
@@ -278,6 +283,7 @@ def automate_tests_ideas(
                 "language": language,
                 "framework": framework,
                 "pom": pom,
+                "model": model,
             },
             severity="INFO",
         )
@@ -328,7 +334,10 @@ def check_accessibility(source_code, stream=True, open_ai_api_key="", model=""):
 
     if config.ENVIRONMENT == "production":
         logger.log_struct(
-            {"mode": "Ideas"},
+            {
+                "mode": "Ideas",
+                "model": model,
+             },
             severity="INFO",
         )
 
