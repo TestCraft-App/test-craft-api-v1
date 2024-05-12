@@ -49,4 +49,4 @@ After deploying the service, Google Cloud Run will provide a URL to access the A
 Contributions to this project are welcome! If you find any issues or have suggestions for improvements, please open an issue or submit a pull request on the project's repository.
 
 ## License
-MIT License
+TestCraft API is licensed under MIT License, and its use is subject to the terms and conditions stated in the license agreement.
