@@ -17,9 +17,15 @@ logger = Config.logger
 DEFAULT_MODEL = "gpt-3.5-turbo"
 SUPPORTED_MODELS = [
     {
+        "name": "gpt-4o",
+        "tokens": 128000, 
+        "label": "gpt-4o (128,000 tokens)"
+    },
+    {
         "name": "gpt-4-turbo",
         "tokens": 128000, 
-        "label": "gpt-4-turbo (128,000 tokens)"},
+        "label": "gpt-4-turbo (128,000 tokens)"
+    },
     {
         "name": "gpt-4-0125-preview",
         "tokens": 128000,
@@ -146,6 +152,7 @@ def models():
     else:
         client = OpenAI(api_key=open_ai_api_key)
     response = client.models.list()
+    print(response)
     # Example model: gpt-3.5-turbo-1106 (16,385 tokens)
     models_list = response.model_dump().get("data")
     filtered_list = [
