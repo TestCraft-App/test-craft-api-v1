@@ -14,7 +14,8 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_MODEL = "gpt-4o"
+MODEL_SELECTION_ENABLED = True
 SUPPORTED_MODELS = [
     {
         "name": "gpt-4o",
@@ -94,7 +95,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
 
     if not key:
         key = config.API_KEY
-        model = DEFAULT_MODEL
+        # model = DEFAULT_MODEL # Comment this line if you want enable model selection without API key
         client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
     else:
         client = OpenAI(api_key=key)
@@ -103,6 +104,8 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
         if config.ENVIRONMENT == "production":
             logger.log_text("Prompt too large", severity="INFO")
         return jsonify({"error": "The prompt is too long."}), 413
+    
+    print(f"Model: {model}")
 
     try:
         response = client.chat.completions.create(
@@ -152,7 +155,6 @@ def models():
     else:
         client = OpenAI(api_key=open_ai_api_key)
     response = client.models.list()
-    print(response)
     # Example model: gpt-3.5-turbo-1106 (16,385 tokens)
     models_list = response.model_dump().get("data")
     filtered_list = [
@@ -163,6 +165,7 @@ def models():
     response = {
         "models": filtered_list,
         "default_model": DEFAULT_MODEL,
+        "model_selection_enabled": MODEL_SELECTION_ENABLED,
     }
     return response, 200
 
