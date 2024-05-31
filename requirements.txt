@@ -1,4 +1,5 @@
 Flask==2.3.2
+flask_cors
 openai
 PyGithub
 google-cloud-secret-manager
