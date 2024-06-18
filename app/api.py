@@ -14,8 +14,8 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-DEFAULT_MODEL = "gpt-4o"
-MODEL_SELECTION_ENABLED = True
+DEFAULT_MODEL = "gpt-3.5-turbo"
+MODEL_SELECTION_ENABLED = False
 SUPPORTED_MODELS = [
     {
         "name": "gpt-4o",
@@ -95,7 +95,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
 
     if not key:
         key = config.API_KEY
-        # model = DEFAULT_MODEL # Comment this line if you want enable model selection without API key
+        model = DEFAULT_MODEL # Comment this line if you want enable model selection without API key
         client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
     else:
         client = OpenAI(api_key=key)
