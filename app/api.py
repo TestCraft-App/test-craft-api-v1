@@ -14,9 +14,14 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-DEFAULT_MODEL = "gpt-3.5-turbo"
+DEFAULT_MODEL = "gpt-4o-mini"
 MODEL_SELECTION_ENABLED = False
 SUPPORTED_MODELS = [
+    {
+        "name": "gpt-4o-mini",
+        "tokens": 128000, 
+        "label": "gpt-4o-mini (128,000 tokens)"
+    },
     {
         "name": "gpt-4o",
         "tokens": 128000, 
