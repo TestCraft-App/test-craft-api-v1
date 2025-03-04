@@ -65,7 +65,7 @@ def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
     except KeyError:
         encoding = tiktoken.encoding_for_model("gpt-4o")
         logger.log_text(f"Failed to get encoding for model {model}, falling back to gpt-4", severity="WARNING")
-    
+
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":
         logger.log_struct(
@@ -110,7 +110,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
         if config.ENVIRONMENT == "production":
             logger.log_text("Prompt too large", severity="INFO")
         return jsonify({"error": "The prompt is too long."}), 413
-    
+
     print(f"Model: {model}")
 
     try:
@@ -130,7 +130,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
             "stream": isStream,
             "user": "TestCraftUser",
         }
-        
+
         if not is_o1_model_or_newer(model):
             body["temperature"] = 0.5
 
@@ -219,7 +219,7 @@ def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
         Format the output as the following example:
         Positive Tests:
         <Idea 1>
-        
+
         Negative Tests:
         <Idea 1>
 
@@ -321,8 +321,8 @@ def automate_tests_ideas(
     line_tab = "\n\t"
     prompt = f"""
     Using the following html:
-    
-    Html: 
+
+    Html:
     ```
     {parse_html(source_code)}
     ```
@@ -376,10 +376,10 @@ def check_accessibility(source_code, stream=True, open_ai_api_key="", model=""):
         Check the HTML element below for accessibility issues according to WCAG 2.1.
         Think about this step by step. First, assess the element against each criterion.
         Then, report the result in the format specified below.
-        For the criteria that cannot be assessed just by looking at the HTML, create accessibility tests. 
+        For the criteria that cannot be assessed just by looking at the HTML, create accessibility tests.
         In the report, each criteria must be a link to the reference documentation.
-        
-        Html: 
+
+        Html:
         ```
         {source_code}
         ```
@@ -434,13 +434,13 @@ def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
 
         Example response:
         Regex: Add User|Update User|Patch User
-        
+
         JSON
         ```
         {tests}
         ```
 
-        Requirement: 
+        Requirement:
         {requirement}
         """
 
