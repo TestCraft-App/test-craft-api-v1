@@ -3,6 +3,7 @@ from inspect import signature
 
 from flask import jsonify, request
 
+
 def query_params():
     def snake_to_camel(word):
         words = word.split('_')
