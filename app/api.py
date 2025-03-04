@@ -19,38 +19,29 @@ MODEL_SELECTION_ENABLED = False
 SUPPORTED_MODELS = [
     {
         "name": "gpt-4o-mini",
-        "tokens": 128000, 
+        "tokens": 128000,
         "label": "gpt-4o-mini (128,000 tokens)"
     },
     {
         "name": "gpt-4o",
-        "tokens": 128000, 
+        "tokens": 128000,
         "label": "gpt-4o (128,000 tokens)"
     },
     {
+        "name": "o1-mini",
+        "tokens": 128000,
+        "label": "o1-mini (128,000 tokens)"
+    },
+    {
+        "name": "o3-mini",
+        "tokens": 200000,
+        "label": "o3-mini (200,000 tokens)"
+    },
+    {
         "name": "gpt-4-turbo",
-        "tokens": 128000, 
+        "tokens": 128000,
         "label": "gpt-4-turbo (128,000 tokens)"
-    },
-    {
-        "name": "gpt-4-0125-preview",
-        "tokens": 128000,
-        "label": "gpt-4-0125-preview (128,000 tokens)",
-    },
-    {
-        "name": "gpt-4-1106-preview",
-        "tokens": 128000,
-        "label": "gpt-4-1106-preview (128,000 tokens)",
-    },
-    {
-        "name": "gpt-3.5-turbo", 
-        "tokens": 16385, 
-        "label": "gpt-3.5-turbo (16,385 tokens)"},
-    {
-        "name": "gpt-3.5-turbo-1106",
-        "tokens": 16385,
-        "label": "gpt-3.5-turbo-1106 (16,385 tokens)",
-    },
+    }
 ]
 MAX_TOKENS = 16000
 ERROR_INVALID_ELEMENT = "Invalid html element."
@@ -63,8 +54,18 @@ def get_model_by_name(name):
     return {}
 
 
+def is_o1_model_or_newer(model_name):
+    """Check if the model is an o1 model or newer (o1, o2, o3, etc.)"""
+    return "o1" in model_name or "o3" in model_name
+
+
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
-    encoding = tiktoken.encoding_for_model(model)
+    try:
+        encoding = tiktoken.encoding_for_model(model)
+    except KeyError:
+        encoding = tiktoken.encoding_for_model("gpt-4o")
+        logger.log_text(f"Failed to get encoding for model {model}, falling back to gpt-4", severity="WARNING")
+    
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":
         logger.log_struct(
@@ -89,7 +90,8 @@ def parse_html(source):
             pattern, "", source, flags=(re.IGNORECASE | re.MULTILINE | re.DOTALL)
         )
         html = htmlmin.minify(text, remove_comments=True, remove_empty_space=True)
-    except:
+    except Exception as e:
+        print(f"Error parsing HTML: {e}")
         html = source
     return html
 
@@ -100,8 +102,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
 
     if not key:
         key = config.API_KEY
-        model = DEFAULT_MODEL # Comment this line if you want enable model selection without API key
-        client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")
+        client = OpenAI(api_key=key, organization="org-vrjw201KSt5hgeiFuytTSaHb")  # Modify with your own organization
     else:
         client = OpenAI(api_key=key)
 
@@ -113,16 +114,27 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
     print(f"Model: {model}")
 
     try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": role},
+        if model == "o1-mini":
+            messages = [
                 {"role": "user", "content": prompt},
-            ],
-            temperature=0.5,
-            stream=isStream,
-            user="TestCraftUser",
-        )
+            ]
+        else:
+            messages = [
+                {"role": "developer", "content": role},
+                {"role": "user", "content": prompt},
+            ]
+
+        body = {
+            "model": model,
+            "messages": messages,
+            "stream": isStream,
+            "user": "TestCraftUser",
+        }
+        
+        if not is_o1_model_or_newer(model):
+            body["temperature"] = 0.5
+
+        response = client.chat.completions.create(**body)
 
         if not isStream:
             print(response)
@@ -137,6 +149,7 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
 
         return Response(generate(), mimetype="text/event-stream")
     except OpenAIError as e:
+        print(f"Error: {e}")
         return jsonify({"error": str(e.message)}), e.status_code
 
 
@@ -194,10 +207,11 @@ def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
 
     prompt = f"""
         Generate test ideas based on the HTML element below. Think this step by step, as a real Tester would.
-        Focus on user-oriented tests that do not refer to HTML elements such as divs or classes. 
-        Include negative tests and creative test scenarios. 
-        Format the output as unordered lists, with a heading for each required list, such as Positive Tests or Negative Tests. Don't include any other heading. 
-        HTML: 
+        Focus on user-oriented tests that do not refer to HTML elements such as divs or classes.
+        Include negative tests and creative test scenarios.
+        Format the output as unordered lists, with a heading for each required list, such as Positive Tests
+         or Negative Tests. Don't include any other heading.
+        HTML:
         ```
         {parse_html(source_code)}
         ```
@@ -247,26 +261,26 @@ def automate_tests(
 
     prompt = f"""
     Generate {framework} tests using {language} based on the html element below.
-    Use {base_url} as the baseUrl. Generate as much tests as possible. 
+    Use {base_url} as the baseUrl. Generate as much tests as possible.
     Always try to add assertions.
     Do not include explanatory or introductory text. The output must be all {language} code.
     Format the code in a plain text format without using triple backticks.
     """
 
     if framework == "playwright":
-        prompt += f"""
+        prompt += """
     Use playwright/test library.
     """
 
     if pom:
-        prompt += f"""
+        prompt += """
     Create page object models and use them in the tests.
     Selectors must be encapsulated in properties. Actions must be encapsulated in methods.
     Include a comment to indicate where each file starts.
     """
 
     prompt += f"""
-    Html: 
+    Html:
     ```
     {parse_html(source_code)}
     ```
@@ -327,12 +341,12 @@ def automate_tests_ideas(
     """
 
     if framework == "playwright":
-        prompt += f"""
+        prompt += """
     Use playwright/test library.
     """
 
     if pom:
-        prompt += f"""
+        prompt += """
     Create page object models and use them in the tests.
     Selectors must be encapsulated in properties. Actions must be encapsulated in methods.
     Include a comment to indicate where each file starts.
@@ -360,7 +374,8 @@ def check_accessibility(source_code, stream=True, open_ai_api_key="", model=""):
 
     prompt = f"""
         Check the HTML element below for accessibility issues according to WCAG 2.1.
-        Think about this step by step. First, assess the element against each criterion. Then, report the result in the format specified below. 
+        Think about this step by step. First, assess the element against each criterion.
+        Then, report the result in the format specified below.
         For the criteria that cannot be assessed just by looking at the HTML, create accessibility tests. 
         In the report, each criteria must be a link to the reference documentation.
         
@@ -402,17 +417,18 @@ def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
     role = "You are a Test Automation expert"
 
     prompt = f"""
-        I have a Mocha test framework. I need you to create a regular expression to include in a grep command to run tests.
+        I have a Mocha test framework.
+        I need you to create a regular expression to include in a grep command to run tests.
 
         Below you will find two things:
-        - A JSON with suites, each containing an array of test names. 
+        - A JSON with suites, each containing an array of test names.
         - A User Requirement to create the grep command
 
         You will have to do the following:
         1. Review each suite name. If directly related to the User Requirement, add it to the regular expression.
         2. Review each test name. If directly related to the User Requirement, add it to the regular expression.
 
-        Only respond with the regular expression. 
+        Only respond with the regular expression.
         If the User Requirement is not related to any suite or test, respond with ".*" to run all the tests.
         Use the format of the example response.
 
