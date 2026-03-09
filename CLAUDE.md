@@ -72,6 +72,23 @@ users/{googleId}/usage/{YYYY-MM-DD}:
 - HTML is minified and script tags stripped before being included in prompts (`parse_html()`).
 - Token count is validated against model limits before calling OpenAI; returns 413 if too large.
 
+## Security Rules
+
+**Before merging any PR, verify ALL of the following:**
+
+1. **No secrets in code** — Never commit API keys, tokens, passwords, or credentials. `.env` must stay gitignored. Use `example.env` for templates (no real values).
+2. **No secrets in logs** — Never `print()` or log API keys, tokens, or full error responses that may contain secrets. Use structured logging with sanitized output.
+3. **No `eval()` or `exec()`** — No dynamic code execution.
+4. **Input validation** — Validate and sanitize all user input (HTML, prompts, API keys) before processing. Don't trust client-provided data.
+5. **Auth required on sensitive endpoints** — All v2 endpoints that consume resources (OpenAI calls, Firestore writes) must use `@require_auth`.
+6. **Error messages must not leak internals** — Don't expose stack traces, file paths, config values, or secrets in API responses. Return generic error messages.
+7. **HTTPS only** — All external API calls must use `https://`.
+8. **Firestore transactions** — Use atomic increments for usage counters to prevent race conditions.
+9. **Token validation** — Google ID tokens must be verified with `google.oauth2.id_token.verify_oauth2_token()` — never trust unverified JWTs.
+10. **Dependencies** — Review new dependencies for known vulnerabilities. Pin versions in `requirements.txt`.
+11. **CORS** — Currently permissive (`CORS(app)`). When restricting, whitelist only the extension's origin.
+12. **Cloud Run** — Uses `--allow-unauthenticated` because the API handles its own auth. Ensure all resource-consuming endpoints are protected by `@require_auth` or API key validation.
+
 ## Code Style
 
 - flake8: `max-line-length = 120`, excludes `.git`, `__pycache__`, `build`, `dist`, `venv`
