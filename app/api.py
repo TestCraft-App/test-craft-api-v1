@@ -3,7 +3,7 @@ import re
 
 from openai import OpenAI, OpenAIError
 import tiktoken
-from flask import Response, jsonify, request
+from flask import Response, g, jsonify, request
 
 from flask import Blueprint
 
@@ -446,3 +446,93 @@ def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
 
     response = call_openai_api(prompt, role, False, key=open_ai_api_key, model=model)
     return response.choices[0].message.content
+
+
+# ─── v2 Endpoints (free tier with Google OAuth) ────────────────────────────────
+
+from app.auth import require_auth
+from app.firestore import get_or_create_user, get_daily_usage, increment_usage, is_limit_reached, DAILY_LIMIT
+
+FREE_TIER_MODEL = "gpt-4o-mini"
+
+
+@api.route("/api/v2/ping", methods=["GET"])
+def v2_ping():
+    return jsonify({"pong": True, "version": 2}), 200
+
+
+@api.route("/api/v2/stream", methods=["POST"])
+@require_auth
+def v2_stream():
+    payload = request.get_json(silent=True)
+    if not payload:
+        return jsonify({"error": "Request body is required."}), 400
+
+    prompt = payload.get("prompt", "")
+    system_message = payload.get("systemMessage", "")
+
+    if not prompt:
+        return jsonify({"error": "prompt is required."}), 400
+
+    user = g.user
+
+    # Check daily usage limit
+    if is_limit_reached(user["googleId"]):
+        return jsonify({
+            "error": f"Daily generation limit reached ({DAILY_LIMIT}/day). Add your own API key for unlimited use."
+        }), 429
+
+    # Force model to gpt-4o-mini (defense in depth)
+    model = FREE_TIER_MODEL
+
+    if not is_prompt_length_valid(prompt, model):
+        return jsonify({"error": "The prompt is too long."}), 413
+
+    client = OpenAI(api_key=config.API_KEY, organization="org-vrjw201KSt5hgeiFuytTSaHb")
+
+    try:
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt},
+        ]
+
+        response = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            stream=True,
+            temperature=0.5,
+            user=f"free-tier:{user['googleId']}",
+        )
+
+        # Increment usage count
+        increment_usage(user["googleId"])
+
+        def generate():
+            for part in response:
+                filtered_chunk = {
+                    "choices": part.model_dump().get("choices"),
+                }
+                yield f"data: {json.dumps(filtered_chunk)}\n\n".encode()
+
+        return Response(generate(), mimetype="text/event-stream")
+    except OpenAIError as e:
+        return jsonify({"error": str(e.message)}), e.status_code
+
+
+@api.route("/api/v2/auth/me", methods=["GET"])
+@require_auth
+def v2_auth_me():
+    user = g.user
+    get_or_create_user(user)
+    daily_usage = get_daily_usage(user["googleId"])
+    return jsonify({
+        "user": {
+            "email": user["email"],
+            "name": user["name"],
+            "picture": user["picture"],
+        },
+        "usage": {
+            "count": daily_usage,
+            "limit": DAILY_LIMIT,
+        },
+    }), 200

@@ -21,10 +21,12 @@ class Config:
     PROJECT_ID = os.environ.get("PROJECT_ID")
     ENVIRONMENT = os.environ.get("FLASK_ENV", "production")
     API_KEY = os.environ.get("OPENAI_API_KEY")
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
     LOG_NAME = "openai-api-proxy-log"
 
     if ENVIRONMENT != "local":
         API_KEY = get_secret(PROJECT_ID, "openai-api-key")
+        GOOGLE_CLIENT_ID = get_secret(PROJECT_ID, "google-client-id")
         logging_client = logging.Client()
         logger = logging_client.logger(LOG_NAME)
     
