@@ -80,7 +80,7 @@ def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
 
 def is_valid_html(source_code):
     # Regex pattern for HTML tags
-    pattern = "^<(\w+).*?>.*$"
+    pattern = r"^<(\w+).*?>.*$"
     return bool(re.match(pattern, source_code.strip(), flags=re.DOTALL))
 
 

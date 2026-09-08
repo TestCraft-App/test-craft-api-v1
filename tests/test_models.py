@@ -55,7 +55,7 @@ class ModelConfigurationTests(unittest.TestCase):
         )
         self.assertEqual(
             [model["label"] for model in response.json["models"]],
-            ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+            ["GPT-5.6 Sol", "GPT-5.6 Terra", "GPT-5.6 Luna"],
         )
         self.assertTrue(all(model["tokens"] == 128000 for model in api_module.SUPPORTED_MODELS))
 
