@@ -2,6 +2,10 @@
 
 TestCraft API provides a REST API to generate test ideas and automation code for different frameworks and languages using the OpenAI models.
 
+## OpenAI models
+
+The API exposes GPT-5.6 Sol (`gpt-5.6-sol`), Terra (`gpt-5.6-terra`), and Luna (`gpt-5.6-luna`) through `GET /api/models`. Requests that omit a model use Luna by default, and the authenticated v2 free tier always uses Luna. TestCraft applies a 128,000-token input limit to each supported model.
+
 ## Running the server
 
 Here you will find instructions to run the API in your infrastructure. 

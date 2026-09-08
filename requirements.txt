@@ -4,6 +4,8 @@ openai
 PyGithub
 google-cloud-secret-manager
 google-cloud-logging
+google-cloud-firestore
+google-auth
 tiktoken
 htmlmin
 python-dotenv
