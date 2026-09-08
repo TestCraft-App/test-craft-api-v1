@@ -14,33 +14,23 @@ import htmlmin
 config = Config()
 logger = Config.logger
 
-DEFAULT_MODEL = "gpt-4o-mini"
+DEFAULT_MODEL = "gpt-5.6-luna"
 MODEL_SELECTION_ENABLED = False
 SUPPORTED_MODELS = [
     {
-        "name": "gpt-4o-mini",
+        "name": "gpt-5.6-sol",
         "tokens": 128000,
-        "label": "gpt-4o-mini (128,000 tokens)"
+        "label": "gpt-5.6-sol (128,000-token input limit)"
     },
     {
-        "name": "gpt-4o",
+        "name": "gpt-5.6-terra",
         "tokens": 128000,
-        "label": "gpt-4o (128,000 tokens)"
+        "label": "gpt-5.6-terra (128,000-token input limit)"
     },
     {
-        "name": "o1-mini",
+        "name": "gpt-5.6-luna",
         "tokens": 128000,
-        "label": "o1-mini (128,000 tokens)"
-    },
-    {
-        "name": "o3-mini",
-        "tokens": 200000,
-        "label": "o3-mini (200,000 tokens)"
-    },
-    {
-        "name": "gpt-4-turbo",
-        "tokens": 128000,
-        "label": "gpt-4-turbo (128,000 tokens)"
+        "label": "gpt-5.6-luna (128,000-token input limit)"
     }
 ]
 MAX_TOKENS = 16000
@@ -59,12 +49,16 @@ def is_o1_model_or_newer(model_name):
     return "o1" in model_name or "o3" in model_name
 
 
+def is_gpt_5_6_model(model_name):
+    return model_name == "gpt-5.6" or model_name.startswith("gpt-5.6-")
+
+
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         encoding = tiktoken.encoding_for_model("gpt-4o")
-        logger.log_text(f"Failed to get encoding for model {model}, falling back to gpt-4", severity="WARNING")
+        logger.log_text(f"Failed to get encoding for model {model}, falling back to gpt-4o", severity="WARNING")
 
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":
@@ -131,7 +125,9 @@ def call_openai_api(prompt, role, isStream, model="", key=""):
             "user": "TestCraftUser",
         }
 
-        if not is_o1_model_or_newer(model):
+        if is_gpt_5_6_model(model):
+            body["reasoning_effort"] = "medium"
+        elif not is_o1_model_or_newer(model):
             body["temperature"] = 0.5
 
         response = client.chat.completions.create(**body)
@@ -173,7 +169,6 @@ def models():
     else:
         client = OpenAI(api_key=open_ai_api_key)
     response = client.models.list()
-    # Example model: gpt-3.5-turbo-1106 (16,385 tokens)
     models_list = response.model_dump().get("data")
     filtered_list = [
         {"label": f"{model['label']}", "id": model["name"]}
@@ -453,7 +448,7 @@ def get_regex_for_run(tests, requirement, open_ai_api_key="", model=""):
 from app.auth import require_auth
 from app.firestore import get_or_create_user, get_daily_usage, increment_usage, is_limit_reached, DAILY_LIMIT
 
-FREE_TIER_MODEL = "gpt-4o-mini"
+FREE_TIER_MODEL = "gpt-5.6-luna"
 
 
 @api.route("/api/v2/ping", methods=["GET"])
@@ -482,7 +477,7 @@ def v2_stream():
             "error": f"Daily generation limit reached ({DAILY_LIMIT}/day). Add your own API key for unlimited use."
         }), 429
 
-    # Force model to gpt-4o-mini (defense in depth)
+    # Force the cost-optimized model for server-funded requests (defense in depth)
     model = FREE_TIER_MODEL
 
     if not is_prompt_length_valid(prompt, model):
@@ -500,7 +495,7 @@ def v2_stream():
             model=model,
             messages=messages,
             stream=True,
-            temperature=0.5,
+            reasoning_effort="medium",
             user=f"free-tier:{user['googleId']}",
         )
 
