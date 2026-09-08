@@ -46,13 +46,13 @@ All POST endpoints accept an optional `openAiApiKey` to use the caller's key ins
 | Method | Route | Purpose | Auth Required |
 |--------|-------|---------|---------------|
 | GET | `/api/v2/ping` | Health check (v2) | No |
-| POST | `/api/v2/stream` | Proxy prompt to OpenAI (gpt-4o-mini) via SSE | Yes |
+| POST | `/api/v2/stream` | Proxy prompt to OpenAI (gpt-5.6-luna) via SSE | Yes |
 | GET | `/api/v2/auth/me` | Get user info + daily usage count | Yes |
 
 **v2 Architecture:**
 - `app/auth.py` — `validate_google_token()` verifies Google ID tokens, `@require_auth` decorator protects endpoints
 - `app/firestore.py` — Firestore operations: `get_or_create_user()`, `get_daily_usage()`, `increment_usage()`, `is_limit_reached()`
-- Free tier forces `gpt-4o-mini` server-side (defense in depth)
+- Free tier forces `gpt-5.6-luna` server-side (defense in depth)
 - Daily limit: 10 generations/day per user (429 when exceeded)
 - Usage tracked in Firestore: `users/{googleId}/usage/{YYYY-MM-DD}` with atomic increment
 
@@ -68,7 +68,7 @@ users/{googleId}/usage/{YYYY-MM-DD}:
 ### Key Design Details
 
 - Streaming endpoints return SSE (`text/event-stream`). Non-streaming returns JSON.
-- `o1-mini` model uses only a `user` message (no `developer` role). Other o-series models (o1, o3) skip the `temperature` parameter.
+- GPT-5.6 Sol, Terra, and Luna use medium reasoning and omit `temperature`. Explicitly supplied older models retain their existing request parameters.
 - HTML is minified and script tags stripped before being included in prompts (`parse_html()`).
 - Token count is validated against model limits before calling OpenAI; returns 413 if too large.
 
