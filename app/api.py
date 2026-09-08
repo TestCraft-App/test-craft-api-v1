@@ -20,17 +20,17 @@ SUPPORTED_MODELS = [
     {
         "name": "gpt-5.6-sol",
         "tokens": 128000,
-        "label": "gpt-5.6-sol (128,000-token input limit)"
+        "label": "GPT-5.6 Sol"
     },
     {
         "name": "gpt-5.6-terra",
         "tokens": 128000,
-        "label": "gpt-5.6-terra (128,000-token input limit)"
+        "label": "GPT-5.6 Terra"
     },
     {
         "name": "gpt-5.6-luna",
         "tokens": 128000,
-        "label": "gpt-5.6-luna (128,000-token input limit)"
+        "label": "GPT-5.6 Luna"
     }
 ]
 MAX_TOKENS = 16000
@@ -53,12 +53,19 @@ def is_gpt_5_6_model(model_name):
     return model_name == "gpt-5.6" or model_name.startswith("gpt-5.6-")
 
 
+def log_warning(message):
+    if hasattr(logger, "log_text"):
+        logger.log_text(message, severity="WARNING")
+    else:
+        logger.warning(message)
+
+
 def is_prompt_length_valid(prompt, model=DEFAULT_MODEL):
     try:
         encoding = tiktoken.encoding_for_model(model)
     except KeyError:
         encoding = tiktoken.encoding_for_model("gpt-4o")
-        logger.log_text(f"Failed to get encoding for model {model}, falling back to gpt-4o", severity="WARNING")
+        log_warning(f"Failed to get encoding for model {model}, falling back to gpt-4o")
 
     num_tokens = len(encoding.encode(prompt))
     if config.ENVIRONMENT == "production":

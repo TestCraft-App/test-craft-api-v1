@@ -1,7 +1,8 @@
+import logging
 import os
 import unittest
 from importlib import import_module
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from flask import g
 
@@ -52,7 +53,35 @@ class ModelConfigurationTests(unittest.TestCase):
             [model["id"] for model in response.json["models"]],
             ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
         )
+        self.assertEqual(
+            [model["label"] for model in response.json["models"]],
+            ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"],
+        )
         self.assertTrue(all(model["tokens"] == 128000 for model in api_module.SUPPORTED_MODELS))
+
+    def test_unknown_tokenizer_falls_back_without_cloud_logger(self):
+        fallback_encoding = MagicMock()
+        fallback_encoding.encode.return_value = [1, 2, 3]
+        local_logger = MagicMock(spec=logging.Logger)
+
+        with (
+            patch.object(
+                api_module.tiktoken,
+                "encoding_for_model",
+                side_effect=[KeyError("unknown model"), fallback_encoding],
+            ) as encoding_for_model,
+            patch.object(api_module, "logger", local_logger),
+        ):
+            result = api_module.is_prompt_length_valid("prompt", "gpt-5.6-luna")
+
+        self.assertTrue(result)
+        self.assertEqual(
+            encoding_for_model.call_args_list,
+            [call("gpt-5.6-luna"), call("gpt-4o")],
+        )
+        local_logger.warning.assert_called_once_with(
+            "Failed to get encoding for model gpt-5.6-luna, falling back to gpt-4o"
+        )
 
     def test_missing_model_uses_server_key_and_luna_with_medium_reasoning(self):
         openai_client = MagicMock()
