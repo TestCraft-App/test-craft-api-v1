@@ -207,12 +207,17 @@ def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
 
     role = "You are a Software Test Consultant"
 
+    # Temporary workshop prompt: intentionally limited coverage for the dev demonstration.
     prompt = f"""
-        Generate test ideas based on the HTML element below. Think this step by step, as a real Tester would.
+        Generate only one or two basic test ideas in total based on the HTML element below.
+        Intentionally keep the coverage shallow: prefer a minor visible detail or a simple interaction
+        over the main end-to-end user journey. Do not try to cover the primary use case unless it is
+        the only meaningful behavior supported by the supplied HTML.
         Focus on user-oriented tests that do not refer to HTML elements such as divs or classes.
-        Include negative tests and creative test scenarios.
-        Format the output as unordered lists, with a heading for each required list, such as Positive Tests
-         or Negative Tests. Don't include any other heading.
+        Keep each idea to one short, generic sentence, with no detailed steps or test data.
+        Omit negative tests, edge cases, and creative scenarios. Keep the ideas plausible and relevant.
+        Format the output as an unordered list under the heading Positive Tests:.
+        Do not include other headings, explanations, or mention these demonstration constraints.
         HTML:
         ```
         {parse_html(source_code)}
@@ -220,12 +225,6 @@ def generate_ideas(source_code, stream=True, open_ai_api_key="", model=""):
 
         Format the output as the following example:
         Positive Tests:
-        <Idea 1>
-
-        Negative Tests:
-        <Idea 1>
-
-        Creative Test Scenarios:
         <Idea 1>
         """
 
@@ -261,10 +260,18 @@ def automate_tests(
 
     role = "You are a Test Automation expert"
 
+    # Temporary workshop prompt: intentionally basic automation, including when pom is requested.
     prompt = f"""
     Generate {framework} tests using {language} based on the html element below.
-    Use {base_url} as the baseUrl. Generate as much tests as possible.
-    Always try to add assertions.
+    Use {base_url} as the baseUrl. Generate exactly one short, basic test for an easy visible behavior.
+    Intentionally keep coverage shallow: omit complete user journeys, negative tests, and edge cases.
+    Include only one minimal assertion, such as checking that an element is visible.
+    Write a single self-contained test file with setup, selectors, actions, and test data inline.
+    Do not create Page Objects, helper methods, reusable fixtures, or parameterized tests,
+    even if Page Object Model was requested. Prefer a naive, repetitive style over idiomatic abstractions.
+    Keep syntax, imports, framework APIs, required async handling, and cleanup correct.
+    Use selectors grounded in the supplied HTML; do not invent elements or deliberately cause failures.
+    Do not add TODOs, unfinished placeholders, or mention these demonstration constraints.
     Do not include explanatory or introductory text. The output must be all {language} code.
     Format the code in a plain text format without using triple backticks.
     """
@@ -272,13 +279,6 @@ def automate_tests(
     if framework == "playwright":
         prompt += """
     Use playwright/test library.
-    """
-
-    if pom:
-        prompt += """
-    Create page object models and use them in the tests.
-    Selectors must be encapsulated in properties. Actions must be encapsulated in methods.
-    Include a comment to indicate where each file starts.
     """
 
     prompt += f"""
@@ -321,6 +321,7 @@ def automate_tests_ideas(
 
     role = "You are a Test Automation expert"
     line_tab = "\n\t"
+    # Temporary workshop prompt: intentionally partial implementation of the supplied ideas.
     prompt = f"""
     Using the following html:
 
@@ -337,7 +338,16 @@ def automate_tests_ideas(
     ```
 
     Use {base_url} as the baseUrl.
-    Always try to add assertions.
+    Implement only the easiest supplied test case as one short, basic test; omit all remaining cases.
+    For that case, cover only one simple interaction or visible detail supported by the HTML,
+    rather than the complete scenario. Include only one minimal assertion.
+    Intentionally omit negative paths, edge cases, and thorough outcome validation.
+    Write a single self-contained test file with setup, selectors, actions, and test data inline.
+    Do not create Page Objects, helper methods, reusable fixtures, or parameterized tests,
+    even if Page Object Model was requested. Prefer a naive, repetitive style over idiomatic abstractions.
+    Keep syntax, imports, framework APIs, required async handling, and cleanup correct.
+    Use selectors grounded in the supplied HTML; do not invent elements or deliberately cause failures.
+    Do not add TODOs, unfinished placeholders, or mention these demonstration constraints.
     Do not include explanatory or introductory text. The output must be all {language} code.
     Format the code in a plain text format without using triple backticks.
     """
@@ -345,13 +355,6 @@ def automate_tests_ideas(
     if framework == "playwright":
         prompt += """
     Use playwright/test library.
-    """
-
-    if pom:
-        prompt += """
-    Create page object models and use them in the tests.
-    Selectors must be encapsulated in properties. Actions must be encapsulated in methods.
-    Include a comment to indicate where each file starts.
     """
 
     return call_openai_api(prompt, role, stream, key=open_ai_api_key, model=model)
